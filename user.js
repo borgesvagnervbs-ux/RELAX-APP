@@ -6,7 +6,6 @@ const mainScreen = document.getElementById('mainScreen');
 const loginTab = document.getElementById('loginTab');
 const registerTab = document.getElementById('registerTab');
 const sidebarUser = document.getElementById('sidebarUser');
-const btnMenuUser = document.getElementById('btnMenuUser');
 const mainContent = document.getElementById('mainContent');
 const selTypes = document.getElementById('massageType');
 const priceDisplay = document.getElementById('priceDisplay');
@@ -153,8 +152,6 @@ async function logout() {
 // ====================
 // MENU LATERAL
 // ====================
-
-btnMenuUser.addEventListener('click', toggleSidebar);
 
 function toggleSidebar() {
   sidebarUser.classList.toggle('open');
@@ -399,13 +396,15 @@ async function loadTimeSlots() {
     
     const now = new Date();
     const isToday = selectedDate.toDateString() === now.toDateString();
+    const currentHour = now.getHours();
     let hasAvailableSlots = false;
     
     for (let hour = 8; hour <= 22; hour++) {
       const slotDate = new Date(selectedDate);
       slotDate.setHours(hour, 0, 0, 0);
       
-      if (isToday && slotDate <= now) continue;
+      // Pular horários já passados
+      if (isToday && hour <= currentHour) continue;
       if (dayAvailability[hour] === false) continue;
       
       const isBooked = dayAppointments.some(ap => {
@@ -654,10 +653,20 @@ function createAppointmentCard(ap, showCancel) {
     statusWrap.appendChild(paid);
   }
   
+  // Mostrar motivo de cancelamento se existir
+  if (ap.cancellationReason) {
+    const reasonDiv = document.createElement('div');
+    reasonDiv.className = 'small';
+    reasonDiv.style.marginTop = '8px';
+    reasonDiv.style.color = '#991b1b';
+    reasonDiv.innerHTML = `<strong>Motivo do cancelamento:</strong> ${ap.cancellationReason}`;
+    info.appendChild(reasonDiv);
+  }
+  
   info.appendChild(statusWrap);
   card.appendChild(info);
   
-  if (showCancel && !ap.paid && ap.start > Date.now()) {
+  if (showCancel && !ap.paid && ap.start > Date.now() && ap.status !== 'CANCELADO') {
     const actions = document.createElement('div');
     actions.style.display = 'flex';
     actions.style.flexDirection = 'column';
@@ -667,15 +676,20 @@ function createAppointmentCard(ap, showCancel) {
     btnCancel.className = 'btn btn-ghost btn-sm';
     btnCancel.textContent = 'Cancelar';
     btnCancel.onclick = async () => {
-      if (confirm('Deseja realmente cancelar este agendamento?')) {
+      const reason = prompt('Informe o motivo do cancelamento (obrigatório):');
+      if (reason && reason.trim()) {
         try {
-          await deleteAppointment(ap.id);
+          ap.status = 'CANCELADO';
+          ap.cancellationReason = reason.trim();
+          await saveAppointment(ap);
           alert('✅ Agendamento cancelado com sucesso!');
           loadUpcomingAppointments();
         } catch (error) {
           console.error('Erro ao cancelar:', error);
           alert('Erro ao cancelar agendamento.');
         }
+      } else if (reason !== null) {
+        alert('O motivo do cancelamento é obrigatório!');
       }
     };
     
