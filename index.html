@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Massagens Zen - Agendamento</title>
+  <link rel="stylesheet" href="style-user.css">
+</head>
+<body>
+  <!-- Tela de Login -->
+  <div id="loginScreen" class="auth-screen">
+    <div class="auth-container">
+      <div class="logo-placeholder" style="width: 80px; height: 80px; margin: 0 auto 24px;"></div>
+      <h1 style="text-align: center; margin-bottom: 8px;">Massagens Zen</h1>
+      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 32px;">Faça login para agendar</p>
+      
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Criar Conta</button>
+      </div>
+
+      <!-- Tab Login -->
+      <div id="loginTab" class="auth-tab-content active">
+        <div style="margin-bottom: 12px;">
+          <input id="loginEmail" type="email" class="input" placeholder="seu@email.com" required/>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <input id="loginPassword" type="password" class="input" placeholder="Senha" required/>
+        </div>
+        <button class="btn btn-primary" onclick="loginWithEmail()" style="width: 100%; margin-bottom: 12px;">Entrar</button>
+        
+        <div class="divider">ou</div>
+        
+        <button class="btn btn-google" onclick="loginWithGoogle()" style="width: 100%;">
+          <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.335z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Continuar com Google
+        </button>
+      </div>
+
+      <!-- Tab Registro -->
+      <div id="registerTab" class="auth-tab-content">
+        <div style="margin-bottom: 12px;">
+          <input id="registerName" type="text" class="input" placeholder="Seu nome completo" required/>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <input id="registerPhone" type="tel" class="input" placeholder="(00) 00000-0000" required maxlength="15"/>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <input id="registerEmail" type="email" class="input" placeholder="seu@email.com" required/>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <input id="registerPassword" type="password" class="input" placeholder="Senha (mínimo 6 caracteres)" required/>
+        </div>
+        <button class="btn btn-primary" onclick="registerWithEmail()" style="width: 100%; margin-bottom: 12px;">Criar Conta</button>
+        
+        <div class="divider">ou</div>
+        
+        <button class="btn btn-google" onclick="loginWithGoogle()" style="width: 100%;">
+          <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 8px;">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.335z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Continuar com Google
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tela Principal -->
+  <div id="mainScreen" class="hidden">
+    <header class="app-header">
+      <button class="hamburger" id="btnMenuUser" aria-label="Abrir menu">☰</button>
+      <div class="logo-placeholder" id="logoUser"></div>
+      <div class="header-title">
+        <h1>Massagens Zen</h1>
+        <p id="greeting">Olá!</p>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebarUser">
+      <div class="sb-header">
+        <div style="font-weight:700;font-size:1.1rem;margin-bottom:4px" id="sidebarUserName">Usuário</div>
+        <div class="small" id="sidebarUserEmail">email@exemplo.com</div>
+      </div>
+
+      <nav class="sb-menu">
+        <div class="sb-item active" data-tab="booking">
+          <span class="sb-icon">📅</span>
+          <span>Agendar</span>
+        </div>
+        <div class="sb-item" data-tab="upcoming">
+          <span class="sb-icon">🕐</span>
+          <span>Próximos</span>
+        </div>
+        <div class="sb-item" data-tab="history">
+          <span class="sb-icon">✓</span>
+          <span>Histórico</span>
+        </div>
+        <div class="sb-item" data-tab="profile">
+          <span class="sb-icon">👤</span>
+          <span>Perfil</span>
+        </div>
+      </nav>
+
+      <div class="sb-footer">
+        <button class="btn btn-danger" onclick="logout()" style="width:100%">Sair</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="container" id="mainContent">
+      <!-- Tab Agendar -->
+      <section id="tab-booking">
+        <div class="card">
+          <h3>Nova Reserva</h3>
+          
+          <div class="top-note">Tipo de massagem</div>
+          <select id="massageType" class="input" style="margin-bottom:12px"></select>
+          
+          <div class="price-display" id="priceDisplayBox" style="margin-bottom:16px">
+            <span class="small">Valor da sessão (1 hora):</span>
+            <span class="price-value" id="priceDisplay">R$ 0,00</span>
+          </div>
+
+          <div class="top-note">Selecione a data</div>
+          <div id="calendarClient" class="calendar-client"></div>
+
+          <div id="timeSlotsSection" class="hidden" style="margin-top:16px">
+            <div class="top-note">Horários disponíveis</div>
+            <div id="timeSlotsList" class="time-slots-grid"></div>
+          </div>
+
+          <div style="margin-top:16px">
+            <textarea id="note" class="input" rows="2" placeholder="Observações (ex: preferência por massagista)"></textarea>
+          </div>
+
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="bookAppointment()" id="btnBook">Confirmar Agendamento</button>
+            <button class="btn btn-ghost" onclick="resetForm()">Limpar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Próximos Agendamentos -->
+      <section id="tab-upcoming" class="hidden">
+        <div class="card">
+          <h3>Próximos Agendamentos</h3>
+          <div class="small" style="margin-bottom:12px">Sessões agendadas e ainda não realizadas</div>
+          <div id="upcomingList" class="list"></div>
+          <div id="emptyUpcoming" class="small empty-state hidden">Nenhum agendamento futuro</div>
+        </div>
+      </section>
+
+      <!-- Tab Histórico -->
+      <section id="tab-history" class="hidden">
+        <div class="card">
+          <h3>Histórico de Sessões</h3>
+          <div class="small" style="margin-bottom:12px">Sessões realizadas e pagas</div>
+          <div id="historyList" class="list"></div>
+          <div id="emptyHistory" class="small empty-state hidden">Nenhuma sessão no histórico</div>
+        </div>
+      </section>
+
+      <!-- Tab Perfil -->
+      <section id="tab-profile" class="hidden">
+        <div class="card">
+          <h3>Meu Perfil</h3>
+          <div style="margin-top:16px">
+            <label class="small" style="display:block;margin-bottom:6px">Nome completo</label>
+            <input id="profileName" type="text" class="input" placeholder="Seu nome completo"/>
+          </div>
+          <div style="margin-top:12px">
+            <label class="small" style="display:block;margin-bottom:6px">Telefone</label>
+            <input id="profilePhone" type="tel" class="input" placeholder="(00) 00000-0000" maxlength="15"/>
+          </div>
+          <div style="margin-top:12px">
+            <label class="small" style="display:block;margin-bottom:6px">Email</label>
+            <input id="profileEmail" type="email" class="input" disabled/>
+          </div>
+          <div style="margin-top:20px">
+            <button class="btn btn-primary" onclick="saveProfile()">Salvar Alterações</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <button class="fab" title="Menu" onclick="toggleSidebar()">☰</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  
+  <!-- Scripts -->
+  <script src="firebase-config.js"></script>
+  <script src="user.js"></script>
+</body>
+</html>
