@@ -150,6 +150,25 @@ async function logout() {
 }
 
 // ====================
+// FUNÇÕES AUXILIARES DE STATUS (PADRONIZADO)
+// ====================
+
+function getStatusBadgeClass(status) {
+  const statusLower = status.toLowerCase();
+  return `status-badge status-${statusLower}`;
+}
+
+function getStatusDisplay(status) {
+  const displays = {
+    'PENDENTE': { icon: '⏳', text: 'PENDENTE' },
+    'CONFIRMADO': { icon: '✓', text: 'CONFIRMADO' },
+    'REALIZADO': { icon: '✓', text: 'REALIZADO' },
+    'CANCELADO': { icon: '✗', text: 'CANCELADO' }
+  };
+  return displays[status] || { icon: '', text: status };
+}
+
+// ====================
 // MENU LATERAL
 // ====================
 
@@ -403,7 +422,6 @@ async function loadTimeSlots() {
       const slotDate = new Date(selectedDate);
       slotDate.setHours(hour, 0, 0, 0);
       
-      // Pular horários já passados
       if (isToday && hour <= currentHour) continue;
       if (dayAvailability[hour] === false) continue;
       
@@ -615,7 +633,7 @@ async function loadHistoryAppointments() {
 }
 
 // ====================
-// CRIAR CARD DE AGENDAMENTO
+// CRIAR CARD DE AGENDAMENTO (PADRONIZADO)
 // ====================
 
 function createAppointmentCard(ap, showCancel) {
@@ -640,20 +658,20 @@ function createAppointmentCard(ap, showCancel) {
   const statusWrap = document.createElement('div');
   statusWrap.style.marginTop = '8px';
   
+  const statusDisplay = getStatusDisplay(ap.status);
   const status = document.createElement('span');
-  status.className = 'status-pill ' + (ap.status === 'CONFIRMADO' ? 'status-confirmed' : 'status-pending');
-  status.textContent = ap.status;
+  status.className = getStatusBadgeClass(ap.status);
+  status.textContent = `${statusDisplay.icon} ${statusDisplay.text}`;
   statusWrap.appendChild(status);
   
   if (ap.paid) {
     const paid = document.createElement('span');
-    paid.className = 'status-pill status-paid';
+    paid.className = 'status-badge status-realizado';
     paid.style.marginLeft = '8px';
-    paid.textContent = 'PAGO';
+    paid.textContent = '✓ PAGO';
     statusWrap.appendChild(paid);
   }
   
-  // Mostrar motivo de cancelamento se existir
   if (ap.cancellationReason) {
     const reasonDiv = document.createElement('div');
     reasonDiv.className = 'small';
