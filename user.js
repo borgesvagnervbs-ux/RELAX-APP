@@ -1,4 +1,4 @@
-// user.js - Cliente com Autenticação e Menu Lateral
+// user.js - Cliente com Autenticação, Menu Lateral e Tela Inicial
 
 // Elementos da UI
 const loginScreen = document.getElementById('loginScreen');
@@ -36,6 +36,25 @@ let unsubscribeAppointments = null;
 let selectedDate = null;
 let selectedHour = null;
 let currentMonth = new Date();
+
+// Frases motivacionais
+const motivationalQuotes = [
+  { text: "A paz vem de dentro. Não a procure fora.", author: "Buda" },
+  { text: "Cuide do seu corpo. É o único lugar que você tem para viver.", author: "Jim Rohn" },
+  { text: "O relaxamento é essencial para a mente criativa.", author: "Anaïs Nin" },
+  { text: "Às vezes, a coisa mais produtiva que você pode fazer é relaxar.", author: "Mark Black" },
+  { text: "O descanso não é um luxo, é uma necessidade.", author: "Arianna Huffington" },
+  { text: "Tire um tempo para fazer sua alma feliz.", author: "Provérbio" },
+  { text: "Sua saúde mental é uma prioridade. Sua felicidade é essencial.", author: "Anônimo" },
+  { text: "Respire. Deixe ir. E lembre-se de que este momento é o único que você tem com certeza.", author: "Oprah Winfrey" },
+  { text: "Quase tudo funcionará novamente se você desconectar por alguns minutos.", author: "Anne Lamott" },
+  { text: "O autocuidado é dar ao mundo o melhor de você, não o que sobrou de você.", author: "Katie Reed" },
+  { text: "Nada pode trazer você paz senão você mesmo.", author: "Ralph Waldo Emerson" },
+  { text: "Relaxar é permitir que você seja.", author: "Thich Nhat Hanh" },
+  { text: "A tensão é quem você acha que deveria ser. Relaxamento é quem você é.", author: "Provérbio Chinês" },
+  { text: "Cuidar de si mesmo não é egoísmo, é autopreservação.", author: "Audre Lorde" },
+  { text: "Seu corpo ouve tudo que sua mente diz. Permaneça positivo.", author: "Naomi Judd" }
+];
 
 // ====================
 // TABS DE AUTENTICAÇÃO
@@ -150,7 +169,7 @@ async function logout() {
 }
 
 // ====================
-// FUNÇÕES AUXILIARES DE STATUS (PADRONIZADO)
+// FUNÇÕES AUXILIARES DE STATUS
 // ====================
 
 function getStatusBadgeClass(status) {
@@ -198,7 +217,9 @@ function openTab(tab) {
     targetTab.classList.remove('hidden');
   }
   
-  if (tab === 'booking') {
+  if (tab === 'home') {
+    loadHomeTab();
+  } else if (tab === 'booking') {
     renderCalendar();
   } else if (tab === 'upcoming') {
     loadUpcomingAppointments();
@@ -206,6 +227,72 @@ function openTab(tab) {
     loadHistoryAppointments();
   } else if (tab === 'profile') {
     loadProfileTab();
+  }
+}
+
+// ====================
+// TELA INICIAL (HOME)
+// ====================
+
+function getDailyQuote() {
+  const today = new Date();
+  const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const index = dayOfYear % motivationalQuotes.length;
+  return motivationalQuotes[index];
+}
+
+function loadHomeTab() {
+  const quoteContainer = document.getElementById('dailyQuote');
+  const lastSessionContainer = document.getElementById('lastSessionInfo');
+  const nextSessionContainer = document.getElementById('nextSessionInfo');
+  
+  // Frase do dia
+  const quote = getDailyQuote();
+  quoteContainer.innerHTML = `
+    <div class="quote-text">"${quote.text}"</div>
+    <div class="quote-author">— ${quote.author}</div>
+  `;
+  
+  // Última sessão
+  const lastSession = allAppointments
+    .filter(ap => ap.userId === currentUser.uid && ap.paid && ap.start < Date.now())
+    .sort((a, b) => b.start - a.start)[0];
+  
+  if (lastSession) {
+    const d = new Date(lastSession.start);
+    lastSessionContainer.innerHTML = `
+      <div class="session-type">${lastSession.typeName}</div>
+      <div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      <div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="session-price">${formatMoney(lastSession.price)}</div>
+    `;
+  } else {
+    lastSessionContainer.innerHTML = '<div class="no-session">Nenhuma sessão realizada ainda</div>';
+  }
+  
+  // Próxima sessão
+  const nextSession = allAppointments
+    .filter(ap => ap.userId === currentUser.uid && ap.start > Date.now() && ap.status !== 'CANCELADO')
+    .sort((a, b) => a.start - b.start)[0];
+  
+  if (nextSession) {
+    const d = new Date(nextSession.start);
+    const statusDisplay = getStatusDisplay(nextSession.status);
+    
+    nextSessionContainer.innerHTML = `
+      <div class="session-type">${nextSession.typeName}</div>
+      <div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      <div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="session-price">${formatMoney(nextSession.price)}</div>
+      <div style="margin-top: 12px;">
+        <span class="${getStatusBadgeClass(nextSession.status)}">${statusDisplay.icon} ${statusDisplay.text}</span>
+      </div>
+    `;
+  } else {
+    nextSessionContainer.innerHTML = `
+      <div class="no-session">Nenhuma sessão agendada</div>
+      <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\\"booking\\"]').click()" style="margin-top: 16px; width: 100%;">Agendar Agora</button>
+    `;
   }
 }
 
@@ -256,17 +343,17 @@ async function saveProfile() {
 
 async function loadTypes() {
   try {
-    selTypes.innerHTML = '<option>Carregando...</option>';
     allTypes = await getAllTypes();
     
-    selTypes.innerHTML = '';
     if (allTypes.length === 0) {
       selTypes.innerHTML = '<option value="">Nenhum tipo cadastrado</option>';
       priceDisplay.textContent = 'R$ 0,00';
       return;
     }
     
+    selTypes.innerHTML = '<option value="">Selecione o tipo de massagem</option>';
     allTypes.sort((a, b) => a.name.localeCompare(b.name));
+    
     allTypes.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
@@ -275,7 +362,8 @@ async function loadTypes() {
       selTypes.appendChild(opt);
     });
     
-    updatePrice();
+    // Resetar preço
+    priceDisplay.textContent = 'R$ 0,00';
   } catch (error) {
     console.error('Erro ao carregar tipos:', error);
     selTypes.innerHTML = '<option value="">Erro ao carregar</option>';
@@ -284,6 +372,11 @@ async function loadTypes() {
 
 function updatePrice() {
   const sel = selTypes.value;
+  if (!sel) {
+    priceDisplay.textContent = 'R$ 0,00';
+    return;
+  }
+  
   const opt = selTypes.querySelector(`option[value="${sel}"]`);
   const price = opt ? opt.dataset.price || 0 : 0;
   priceDisplay.textContent = formatMoney(price || 0);
@@ -570,6 +663,8 @@ function resetForm() {
   note.value = '';
   selectedDate = null;
   selectedHour = null;
+  selTypes.value = '';
+  priceDisplay.textContent = 'R$ 0,00';
   timeSlotsSection.classList.add('hidden');
   renderCalendar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -633,7 +728,7 @@ async function loadHistoryAppointments() {
 }
 
 // ====================
-// CRIAR CARD DE AGENDAMENTO (PADRONIZADO)
+// CRIAR CARD DE AGENDAMENTO
 // ====================
 
 function createAppointmentCard(ap, showCancel) {
@@ -740,8 +835,8 @@ onAuthChange(async (user) => {
     await loadTypes();
     allAppointments = await getUserAppointments(user.uid);
     
-    renderCalendar();
-    loadUpcomingAppointments();
+    // Abrir tela inicial por padrão
+    openTab('home');
     
     if (unsubscribeTypes) unsubscribeTypes();
     unsubscribeTypes = onTypesChange(types => {
@@ -754,6 +849,7 @@ onAuthChange(async (user) => {
       allAppointments = appointments;
       loadUpcomingAppointments();
       loadHistoryAppointments();
+      loadHomeTab();
       if (selectedDate) loadTimeSlots();
     });
     
