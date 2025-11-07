@@ -91,13 +91,17 @@
       </div>
 
       <nav class="sb-menu">
-        <div class="sb-item active" data-tab="booking">
+        <div class="sb-item active" data-tab="home">
+          <span class="sb-icon">🏠</span>
+          <span>Tela Inicial</span>
+        </div>
+        <div class="sb-item" data-tab="booking">
           <span class="sb-icon">📅</span>
           <span>Agendar</span>
         </div>
         <div class="sb-item" data-tab="upcoming">
           <span class="sb-icon">🕐</span>
-          <span>Próximos</span>
+          <span>Próximas Sessões</span>
         </div>
         <div class="sb-item" data-tab="history">
           <span class="sb-icon">✓</span>
@@ -116,13 +120,39 @@
 
     <!-- Main Content -->
     <main class="container" id="mainContent">
+      <!-- Tab Tela Inicial -->
+      <section id="tab-home">
+        <div class="card quote-card">
+          <h3 style="margin-bottom: 16px; text-align: center; color: var(--primary);">💭 Frase do Dia</h3>
+          <div id="dailyQuote"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px;">
+          <div class="card session-card">
+            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <span>✨</span> Última Sessão
+            </h3>
+            <div id="lastSessionInfo"></div>
+          </div>
+
+          <div class="card session-card">
+            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <span>📅</span> Próxima Sessão
+            </h3>
+            <div id="nextSessionInfo"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- Tab Agendar -->
-      <section id="tab-booking">
+      <section id="tab-booking" class="hidden">
         <div class="card">
-          <h3>Nova Reserva</h3>
+          <h3>Novo Agendamento</h3>
           
-          <div class="top-note">Tipo de massagem</div>
-          <select id="massageType" class="input" style="margin-bottom:12px"></select>
+          <div class="top-note">Selecione o tipo de massagem</div>
+          <select id="massageType" class="input" style="margin-bottom:12px">
+            <option value="">Carregando...</option>
+          </select>
           
           <div class="price-display" id="priceDisplayBox" style="margin-bottom:16px">
             <span class="small">Valor da sessão (1 hora):</span>
