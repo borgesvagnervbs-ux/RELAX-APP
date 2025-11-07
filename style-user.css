@@ -295,6 +295,88 @@ body {
   font-weight: 700;
 }
 
+/* ===== TELA INICIAL - QUOTE CARD ===== */
+.quote-card {
+  background: linear-gradient(135deg, #e6fff2 0%, #f0fff8 100%);
+  border: 2px solid var(--accent-light);
+  text-align: center;
+  padding: 28px 24px;
+}
+
+.quote-text {
+  font-size: 1.2rem;
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.quote-author {
+  font-size: 1rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ===== TELA INICIAL - SESSION CARDS ===== */
+.session-card {
+  background: var(--card-gradient);
+  border: 2px solid #e6f1ee;
+  transition: all 0.3s ease;
+}
+
+.session-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(15, 43, 42, 0.12);
+}
+
+.session-type {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 12px;
+}
+
+.session-date {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.session-time {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.session-price {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid #e6f1ee;
+}
+
+.no-session {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+.no-session::before {
+  content: "📅";
+  display: block;
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
 /* ===== FORM ELEMENTS ===== */
 .input,
 select,
@@ -411,7 +493,7 @@ select {
   min-height: 38px;
 }
 
-/* ===== STATUS BADGE (PADRONIZADO) ===== */
+/* ===== STATUS BADGE ===== */
 .status-badge {
   display: inline-block;
   padding: 6px 12px;
@@ -823,6 +905,11 @@ select {
   .fab {
     display: none;
   }
+
+  /* Grid 2 colunas para session cards em tablet */
+  #tab-home > div:last-child {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ===== RESPONSIVE - DESKTOP ===== */
@@ -842,6 +929,14 @@ select {
 
   .time-slots-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .quote-text {
+    font-size: 1.3rem;
+  }
+
+  .quote-author {
+    font-size: 1.1rem;
   }
 }
 
