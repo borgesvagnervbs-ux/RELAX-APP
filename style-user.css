@@ -1,4 +1,4 @@
-/* style-user.css - Interface do Cliente Mobile-First */
+/* style-user.css - Interface do Cliente Mobile-First COM RODAPÉ */
 
 :root {
   --primary: #6fb7a7;
@@ -40,6 +40,13 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+}
+
+/* ===== LAYOUT PRINCIPAL ===== */
+#mainScreen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 /* ===== TELA DE AUTENTICAÇÃO ===== */
@@ -268,10 +275,11 @@ body {
 
 /* ===== MAIN CONTAINER ===== */
 .container {
-  padding: 20px 16px;
+  padding: 20px 16px 80px 16px;
   max-width: 700px;
   margin: 0 auto;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 1;
 }
 
 .container.shift {
@@ -837,6 +845,196 @@ select {
   box-shadow: 0 12px 32px rgba(111, 183, 167, 0.5);
 }
 
+/* ===== RODAPÉ ===== */
+.app-footer {
+  background: linear-gradient(135deg, #0f2b2a 0%, #1a3d3c 100%);
+  color: white;
+  margin-top: auto;
+  width: 100%;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  padding: 40px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.footer-section h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--accent-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-about {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.footer-logo-icon {
+  width: 56px;
+  height: 56px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(111, 183, 167, 0.3);
+}
+
+.footer-brand h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+  background: linear-gradient(135deg, var(--accent-light), white);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.footer-brand p {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  color: var(--accent-light);
+}
+
+.footer-description {
+  line-height: 1.6;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+.footer-contact-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+
+.footer-contact-item i {
+  font-size: 1.3rem;
+  color: var(--accent);
+  min-width: 20px;
+  margin-top: 2px;
+}
+
+.footer-contact-item strong {
+  display: block;
+  color: var(--accent-light);
+  margin-bottom: 2px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-contact-item p {
+  opacity: 0.9;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.social-links {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.social-link i {
+  font-size: 1.2rem;
+}
+
+.social-link:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.social-link.whatsapp {
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+.social-link.whatsapp:hover {
+  background: #25d366;
+  border-color: #25d366;
+  box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
+}
+
+.social-link.facebook {
+  border-color: rgba(24, 119, 242, 0.3);
+}
+
+.social-link.facebook:hover {
+  background: #1877f2;
+  border-color: #1877f2;
+  box-shadow: 0 8px 24px rgba(24, 119, 242, 0.4);
+}
+
+.social-link.instagram {
+  border-color: rgba(225, 48, 108, 0.3);
+}
+
+.social-link.instagram:hover {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  border-color: #e6683c;
+  box-shadow: 0 8px 24px rgba(225, 48, 108, 0.4);
+}
+
+.social-link.location {
+  border-color: rgba(234, 67, 53, 0.3);
+}
+
+.social-link.location:hover {
+  background: #ea4335;
+  border-color: #ea4335;
+  box-shadow: 0 8px 24px rgba(234, 67, 53, 0.4);
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.footer-bottom p {
+  margin: 4px 0;
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+.footer-dev {
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-light), white);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* ===== UTILITY CLASSES ===== */
 .small {
   font-size: 0.875rem;
@@ -863,6 +1061,40 @@ select {
   opacity: 0.5;
 }
 
+/* ===== RESPONSIVE - MOBILE SMALL ===== */
+@media (max-width: 480px) {
+  .social-links {
+    grid-template-columns: 1fr;
+  }
+  
+  .footer-content {
+    gap: 24px;
+    padding: 32px 16px;
+  }
+  
+  .footer-logo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .footer-logo-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .footer-brand h3 {
+    font-size: 1.2rem;
+  }
+  
+  .footer-section h4 {
+    font-size: 1rem;
+  }
+  
+  .container {
+    padding: 16px 12px 60px 12px;
+  }
+}
+
 /* ===== RESPONSIVE - TABLET ===== */
 @media (min-width: 768px) {
   .sidebar {
@@ -873,7 +1105,7 @@ select {
 
   .container {
     margin-left: 0;
-    padding: 24px 20px;
+    padding: 24px 20px 80px 20px;
     max-width: 800px;
   }
 
@@ -910,12 +1142,21 @@ select {
   #tab-home > div:last-child {
     grid-template-columns: repeat(2, 1fr);
   }
+  
+  .footer-content {
+    grid-template-columns: 1.5fr 1fr 1fr;
+    padding: 48px 32px;
+  }
+  
+  .social-links {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ===== RESPONSIVE - DESKTOP ===== */
 @media (min-width: 1024px) {
   .container {
-    padding: 32px 24px;
+    padding: 32px 24px 80px 24px;
     max-width: 900px;
   }
 
@@ -937,6 +1178,10 @@ select {
 
   .quote-author {
     font-size: 1.1rem;
+  }
+  
+  .footer-content {
+    padding: 64px 48px;
   }
 }
 
@@ -969,7 +1214,8 @@ select {
 select:focus-visible,
 textarea:focus-visible,
 .calendar-day:focus-visible,
-.time-slot:focus-visible {
+.time-slot:focus-visible,
+.social-link:focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 2px;
 }
@@ -985,7 +1231,8 @@ textarea:focus-visible,
   .fab,
   .sidebar,
   .calendar-client,
-  .time-slots-grid {
+  .time-slots-grid,
+  .app-footer {
     display: none !important;
   }
 
@@ -1006,3 +1253,5 @@ textarea:focus-visible,
     border: 1px solid currentColor;
   }
 }
+
+/* ===== FIM DO ARQUIVO CSS ===== */
