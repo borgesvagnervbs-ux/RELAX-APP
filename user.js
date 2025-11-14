@@ -1,4 +1,5 @@
 // user.js - Cliente com Autenticação, Menu Lateral e Tela Inicial
+// CORRIGIDO: Seleciona automaticamente a data de hoje ao abrir agendamentos
 
 // Elementos da UI
 const loginScreen = document.getElementById('loginScreen');
@@ -220,7 +221,8 @@ function openTab(tab) {
   if (tab === 'home') {
     loadHomeTab();
   } else if (tab === 'booking') {
-    renderCalendar();
+    // NOVO: Selecionar automaticamente a data de hoje
+    initBookingTab();
   } else if (tab === 'upcoming') {
     loadUpcomingAppointments();
   } else if (tab === 'history') {
@@ -228,6 +230,25 @@ function openTab(tab) {
   } else if (tab === 'profile') {
     loadProfileTab();
   }
+}
+
+// ====================
+// INICIALIZAÇÃO DO TAB DE AGENDAMENTOS
+// ====================
+
+async function initBookingTab() {
+  // Renderizar calendário
+  renderCalendar();
+  
+  // Selecionar automaticamente a data de hoje
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Atualizar o mês atual para hoje
+  currentMonth = new Date(today);
+  
+  // Selecionar a data de hoje
+  await selectDate(today);
 }
 
 // ====================
