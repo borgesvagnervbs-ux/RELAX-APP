@@ -1086,6 +1086,7 @@ select {
   .footer-logo-icon {
     width: 48px;
     height: 48px;
+    background: url('icon-512.png') center/contain no-repeat;
   }
   
   .footer-brand h3 {
@@ -1269,3 +1270,4 @@ textarea:focus-visible,
 }
 
 /* ===== FIM DO ARQUIVO CSS ===== */
+
