@@ -1,4 +1,4 @@
-/* style-user.css - Interface do Cliente Mobile-First COM RODAPÉ */
+/* style-user.css - Interface do Cliente Mobile-First COM RODAPÉ CORRIGIDO */
 
 :root {
   --primary: #6fb7a7;
@@ -275,7 +275,7 @@ body {
 
 /* ===== MAIN CONTAINER ===== */
 .container {
-  padding: 20px 16px 80px 16px;
+  padding: 20px 16px 100px 16px;
   max-width: 700px;
   margin: 0 auto;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -817,7 +817,7 @@ select {
   line-height: 1.4;
 }
 
-/* ===== FAB (Floating Action Button) ===== */
+/* ===== FAB (Floating Action Button) - Z-INDEX AUMENTADO ===== */
 .fab {
   position: fixed;
   bottom: 24px;
@@ -836,7 +836,8 @@ select {
   font-size: 1.4rem;
   font-weight: 300;
   transition: all 0.3s ease;
-  z-index: 80;
+  z-index: 999;
+  pointer-events: auto;
 }
 
 .fab:hover,
@@ -845,12 +846,14 @@ select {
   box-shadow: 0 12px 32px rgba(111, 183, 167, 0.5);
 }
 
-/* ===== RODAPÉ ===== */
+/* ===== RODAPÉ - Z-INDEX AJUSTADO ===== */
 .app-footer {
   background: linear-gradient(135deg, #0f2b2a 0%, #1a3d3c 100%);
   color: white;
   margin-top: auto;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .footer-content {
@@ -963,6 +966,9 @@ select {
   border: 2px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
   color: white;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
 }
 
 .social-link i {
@@ -1091,7 +1097,14 @@ select {
   }
   
   .container {
-    padding: 16px 12px 60px 12px;
+    padding: 16px 12px 120px 12px;
+  }
+  
+  .fab {
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
   }
 }
 
@@ -1215,7 +1228,8 @@ select:focus-visible,
 textarea:focus-visible,
 .calendar-day:focus-visible,
 .time-slot:focus-visible,
-.social-link:focus-visible {
+.social-link:focus-visible,
+.fab:focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 2px;
 }
