@@ -502,8 +502,21 @@ function loadHomeTab() {
     const statusDisplay = getStatusDisplay(nextSession.status);
     nextSessionContainer.innerHTML = `<div class="session-type">${nextSession.typeName}</div><div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div><div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div><div class="session-price">${formatMoney(nextSession.price)}</div><div style="margin-top: 12px;"><span class="${getStatusBadgeClass(nextSession.status)}">${statusDisplay.icon} ${statusDisplay.text}</span></div>`;
   } else {
-    nextSessionContainer.innerHTML = '<div class="no-session">Nenhuma sessão agendada</div><button class="btn btn-primary" onclick="document.querySelector(\'[data-tab=\\"booking\\"]\').click()" style="margin-top: 16px; width: 100%;">Agendar Agora</button>';
+    nextSessionContainer.innerHTML = '<div class="no-session">Nenhuma sessão agendada</div><button class="btn btn-primary" onclick="openBookingTab()" style="margin-top: 16px; width: 100%;">Agendar Agora</button>';
   }
+}
+
+// Função para abrir a tela de agendamento
+function openBookingTab() {
+  // Ativar o item do menu lateral
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.querySelector('.sb-item[data-tab="booking"]').classList.add('active');
+  
+  // Abrir a tab de agendamento
+  openTab('booking');
+  
+  // Scroll suave para o topo
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ====================
