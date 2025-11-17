@@ -41,6 +41,10 @@
           </svg>
           Continuar com Google
         </button>
+        
+        <p style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+          Primeiro acesso? <a href="#" onclick="showRegisterTab(); return false;" style="color: var(--primary); font-weight: 600; text-decoration: none;">Registre-se</a>
+        </p>
       </div>
 
       <!-- Tab Registro -->
@@ -49,14 +53,44 @@
           <input id="registerName" type="text" class="input" placeholder="Seu nome completo" required/>
         </div>
         <div style="margin-bottom: 12px;">
+          <input id="registerCpf" type="text" class="input" placeholder="CPF" required maxlength="14"/>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <input id="registerBirthdate" type="text" class="input" placeholder="Data de Nascimento (DD/MM/AAAA)" required maxlength="10"/>
+        </div>
+        <div style="margin-bottom: 12px;">
           <input id="registerPhone" type="tel" class="input" placeholder="(00) 00000-0000" required maxlength="15"/>
         </div>
         <div style="margin-bottom: 12px;">
           <input id="registerEmail" type="email" class="input" placeholder="seu@email.com" required/>
         </div>
-        <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: 12px;">
           <input id="registerPassword" type="password" class="input" placeholder="Senha (mínimo 6 caracteres)" required/>
         </div>
+        
+        <!-- Endereço -->
+        <h4 style="margin: 20px 0 12px 0; color: var(--text); font-size: 1rem;">Endereço</h4>
+        <div style="margin-bottom: 12px; display: flex; gap: 8px;">
+          <input id="registerCep" type="text" class="input" placeholder="CEP" required maxlength="9" style="flex: 1;"/>
+          <button type="button" class="btn btn-ghost" onclick="searchCep()" style="padding: 14px 20px;">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <input id="registerStreet" type="text" class="input" placeholder="Rua" required/>
+        </div>
+        <div style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px;">
+          <input id="registerNumber" type="text" class="input" placeholder="Número" required/>
+          <input id="registerComplement" type="text" class="input" placeholder="Complemento (opcional)"/>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <input id="registerNeighborhood" type="text" class="input" placeholder="Bairro" required/>
+        </div>
+        <div style="margin-bottom: 16px; display: grid; grid-template-columns: 2fr 1fr; gap: 8px;">
+          <input id="registerCity" type="text" class="input" placeholder="Cidade" required/>
+          <input id="registerState" type="text" class="input" placeholder="UF" required maxlength="2"/>
+        </div>
+        
         <button class="btn btn-primary" onclick="registerWithEmail()" style="width: 100%; margin-bottom: 12px;">Criar Conta</button>
         
         <div class="divider">ou</div>
@@ -70,7 +104,58 @@
           </svg>
           Continuar com Google
         </button>
+        
+        <p style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+          Já tem conta? <a href="#" onclick="showLoginTab(); return false;" style="color: var(--primary); font-weight: 600; text-decoration: none;">Faça login</a>
+        </p>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal de Completar Cadastro (Google) -->
+  <div id="completeProfileModal" class="modal hidden">
+    <div class="modal-content">
+      <h2 style="margin-bottom: 8px; text-align: center;">Complete seu Cadastro</h2>
+      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 24px; font-size: 0.9rem;">
+        Precisamos de mais algumas informações para continuar
+      </p>
+      
+      <div style="margin-bottom: 12px;">
+        <input id="completeName" type="text" class="input" placeholder="Seu nome completo" required/>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <input id="completeCpf" type="text" class="input" placeholder="CPF" required maxlength="14"/>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <input id="completeBirthdate" type="text" class="input" placeholder="Data de Nascimento (DD/MM/AAAA)" required maxlength="10"/>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <input id="completePhone" type="tel" class="input" placeholder="(00) 00000-0000" required maxlength="15"/>
+      </div>
+      
+      <h4 style="margin: 20px 0 12px 0; color: var(--text); font-size: 1rem;">Endereço</h4>
+      <div style="margin-bottom: 12px; display: flex; gap: 8px;">
+        <input id="completeCep" type="text" class="input" placeholder="CEP" required maxlength="9" style="flex: 1;"/>
+        <button type="button" class="btn btn-ghost" onclick="searchCepComplete()" style="padding: 14px 20px;">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <input id="completeStreet" type="text" class="input" placeholder="Rua" required/>
+      </div>
+      <div style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px;">
+        <input id="completeNumber" type="text" class="input" placeholder="Número" required/>
+        <input id="completeComplement" type="text" class="input" placeholder="Complemento (opcional)"/>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <input id="completeNeighborhood" type="text" class="input" placeholder="Bairro" required/>
+      </div>
+      <div style="margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 8px;">
+        <input id="completeCity" type="text" class="input" placeholder="Cidade" required/>
+        <input id="completeState" type="text" class="input" placeholder="UF" required maxlength="2"/>
+      </div>
+      
+      <button class="btn btn-primary" onclick="completeProfile()" style="width: 100%;">Salvar e Continuar</button>
     </div>
   </div>
 
@@ -208,6 +293,14 @@
             <input id="profileName" type="text" class="input" placeholder="Seu nome completo"/>
           </div>
           <div style="margin-top:12px">
+            <label class="small" style="display:block;margin-bottom:6px">CPF</label>
+            <input id="profileCpf" type="text" class="input" placeholder="CPF" maxlength="14"/>
+          </div>
+          <div style="margin-top:12px">
+            <label class="small" style="display:block;margin-bottom:6px">Data de Nascimento</label>
+            <input id="profileBirthdate" type="text" class="input" placeholder="DD/MM/AAAA" maxlength="10"/>
+          </div>
+          <div style="margin-top:12px">
             <label class="small" style="display:block;margin-bottom:6px">Telefone</label>
             <input id="profilePhone" type="tel" class="input" placeholder="(00) 00000-0000" maxlength="15"/>
           </div>
@@ -215,6 +308,29 @@
             <label class="small" style="display:block;margin-bottom:6px">Email</label>
             <input id="profileEmail" type="email" class="input" disabled/>
           </div>
+          
+          <h4 style="margin: 24px 0 12px 0; color: var(--text); font-size: 1.1rem;">Endereço</h4>
+          <div style="margin-bottom: 12px; display: flex; gap: 8px;">
+            <input id="profileCep" type="text" class="input" placeholder="CEP" maxlength="9" style="flex: 1;"/>
+            <button type="button" class="btn btn-ghost" onclick="searchCepProfile()" style="padding: 14px 20px;">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          <div style="margin-top:12px">
+            <input id="profileStreet" type="text" class="input" placeholder="Rua"/>
+          </div>
+          <div style="margin-top:12px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px;">
+            <input id="profileNumber" type="text" class="input" placeholder="Número"/>
+            <input id="profileComplement" type="text" class="input" placeholder="Complemento (opcional)"/>
+          </div>
+          <div style="margin-top:12px">
+            <input id="profileNeighborhood" type="text" class="input" placeholder="Bairro"/>
+          </div>
+          <div style="margin-top:12px; display: grid; grid-template-columns: 2fr 1fr; gap: 8px;">
+            <input id="profileCity" type="text" class="input" placeholder="Cidade"/>
+            <input id="profileState" type="text" class="input" placeholder="UF" maxlength="2"/>
+          </div>
+          
           <div style="margin-top:20px">
             <button class="btn btn-primary" onclick="saveProfile()">Salvar Alterações</button>
           </div>
