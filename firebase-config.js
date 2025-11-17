@@ -27,7 +27,7 @@ const usersCollection = db.collection('users');
 // ====================
 
 // Registrar usuário com email e senha
-async function registerUser(email, password, name, phone) {
+async function registerUser(email, password, name, phone, additionalData) {
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     const user = userCredential.user;
@@ -36,13 +36,17 @@ async function registerUser(email, password, name, phone) {
       displayName: name
     });
     
-    await usersCollection.doc(user.uid).set({
+    const userData = {
       uid: user.uid,
       email: user.email,
       name: name,
       phone: phone,
-      createdAt: Date.now()
-    });
+      createdAt: Date.now(),
+      profileComplete: true,
+      ...additionalData
+    };
+    
+    await usersCollection.doc(user.uid).set(userData);
     
     return user;
   } catch (error) {
@@ -72,14 +76,18 @@ async function loginWithGoogleProvider() {
     const result = await auth.signInWithPopup(provider);
     const user = result.user;
     
+    // Verificar se o usuário já existe no Firestore
     const userDoc = await usersCollection.doc(user.uid).get();
+    
     if (!userDoc.exists) {
+      // Primeiro acesso com Google - criar perfil básico sem dados completos
       await usersCollection.doc(user.uid).set({
         uid: user.uid,
         email: user.email,
         name: user.displayName || '',
         phone: '',
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        profileComplete: false // Marca que o perfil ainda precisa ser completado
       });
     }
     
@@ -131,10 +139,13 @@ async function getUserProfile(uid) {
 // Atualizar perfil do usuário
 async function updateUserProfile(uid, data) {
   try {
-    await usersCollection.doc(uid).update({
+    const updateData = {
       ...data,
-      updatedAt: Date.now()
-    });
+      updatedAt: Date.now(),
+      profileComplete: true
+    };
+    
+    await usersCollection.doc(uid).update(updateData);
     
     if (data.name && auth.currentUser) {
       await auth.currentUser.updateProfile({
@@ -144,6 +155,29 @@ async function updateUserProfile(uid, data) {
   } catch (error) {
     console.error('Erro ao atualizar perfil:', error);
     throw error;
+  }
+}
+
+// Verificar se o perfil está completo
+async function isProfileComplete(uid) {
+  try {
+    const profile = await getUserProfile(uid);
+    if (!profile) return false;
+    
+    // Verificar se todos os campos obrigatórios estão preenchidos
+    return profile.profileComplete === true && 
+           profile.cpf && 
+           profile.birthdate && 
+           profile.address && 
+           profile.address.cep && 
+           profile.address.street && 
+           profile.address.number && 
+           profile.address.neighborhood && 
+           profile.address.city && 
+           profile.address.state;
+  } catch (error) {
+    console.error('Erro ao verificar perfil:', error);
+    return false;
   }
 }
 
