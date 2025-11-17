@@ -257,6 +257,7 @@ async function loginWithEmail() {
   if (!email || !password) { alert('Preencha email e senha'); return; }
   try {
     await loginUser(email, password);
+    // O resto é tratado pelo onAuthChange
   } catch (error) {
     console.error('Erro ao fazer login:', error);
     let message = 'Erro ao fazer login';
@@ -300,11 +301,9 @@ async function registerWithEmail() {
   if (!password || password.length < 6) { alert('Senha deve ter no mínimo 6 caracteres'); return; }
   
   try {
-    const userData = {
-      name,
+    const additionalData = {
       cpf: unmaskCpf(cpf),
       birthdate,
-      phone,
       address: {
         cep: unmaskCep(cep),
         street,
@@ -315,8 +314,10 @@ async function registerWithEmail() {
         state: state.toUpperCase()
       }
     };
-    await registerUser(email, password, userData.name, userData.phone, userData);
+    
+    await registerUser(email, password, name, phone, additionalData);
     alert('✅ Conta criada com sucesso!');
+    // O resto é tratado pelo onAuthChange
   } catch (error) {
     console.error('Erro ao registrar:', error);
     let message = 'Erro ao criar conta';
@@ -330,10 +331,11 @@ async function registerWithEmail() {
 async function loginWithGoogle() {
   try {
     await loginWithGoogleProvider();
+    // O resto é tratado pelo onAuthChange
   } catch (error) {
     console.error('Erro ao fazer login com Google:', error);
-    if (error.code !== 'auth/popup-closed-by-user') {
-      alert('Erro ao fazer login com Google');
+    if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+      alert('Erro ao fazer login com Google. Tente novamente.');
     }
   }
 }
@@ -382,12 +384,16 @@ async function completeProfile() {
         state: state.toUpperCase()
       }
     };
+    
     await updateUserProfile(currentUser.uid, userData);
-    userProfile = { ...userProfile, ...userData };
+    
+    // Atualizar o perfil local
+    userProfile = { ...userProfile, ...userData, profileComplete: true };
+    
+    // Fechar modal e inicializar app
     completeProfileModal.classList.add('hidden');
-    const firstName = name.split(' ')[0];
-    greeting.textContent = `Olá, ${firstName}!`;
-    sidebarUserName.textContent = firstName;
+    await initializeApp();
+    
     alert('✅ Cadastro completado com sucesso!');
   } catch (error) {
     console.error('Erro ao completar perfil:', error);
@@ -628,6 +634,7 @@ function renderCalendar() {
   btnPrev.innerHTML = '◀';
   btnPrev.onclick = () => { currentMonth.setMonth(currentMonth.getMonth() - 1); renderCalendar(); };
   const monthTitle = document.createElement('div');
+  monthTitle.className = 'month-title';
   monthTitle.textContent = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   const btnNext = document.createElement('button');
   btnNext.className = 'btn-nav';
@@ -947,52 +954,119 @@ function createAppointmentCard(ap, showCancel) {
 }
 
 // ====================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO DO APP
 // ====================
 
-onAuthChange(async (user) => {
-  if (user) {
-    currentUser = user;
-    userProfile = await getUserProfile(user.uid);
-    if (userProfile && (!userProfile.cpf || !userProfile.birthdate || !userProfile.address)) {
-      document.getElementById('completeName').value = userProfile.name || user.displayName || '';
-      document.getElementById('completePhone').value = userProfile.phone || '';
-      completeProfileModal.classList.remove('hidden');
-      return;
-    }
-    if (userProfile) {
-      const firstName = userProfile.name.split(' ')[0];
-      greeting.textContent = `Olá, ${firstName}!`;
-      sidebarUserName.textContent = firstName;
-      sidebarUserEmail.textContent = userProfile.email;
-    }
+async function initializeApp() {
+  try {
+    console.log('🚀 Inicializando aplicação...');
+    
+    // Mostrar tela principal
     loginScreen.classList.add('hidden');
     mainScreen.classList.remove('hidden');
+    
+    // Configurar informações do usuário
+    const firstName = userProfile.name.split(' ')[0];
+    greeting.textContent = `Olá, ${firstName}!`;
+    sidebarUserName.textContent = firstName;
+    sidebarUserEmail.textContent = userProfile.email;
+    
+    // Carregar dados
     await loadTypes();
-    allAppointments = await getUserAppointments(user.uid);
+    allAppointments = await getUserAppointments(currentUser.uid);
+    
+    // Abrir tela inicial
     openTab('home');
+    
+    // Configurar listeners em tempo real
     if (unsubscribeTypes) unsubscribeTypes();
-    unsubscribeTypes = onTypesChange(types => { allTypes = types; loadTypes(); });
+    unsubscribeTypes = onTypesChange(types => { 
+      allTypes = types; 
+      loadTypes(); 
+    });
+    
     if (unsubscribeAppointments) unsubscribeAppointments();
-    unsubscribeAppointments = onUserAppointmentsChange(user.uid, appointments => {
+    unsubscribeAppointments = onUserAppointmentsChange(currentUser.uid, appointments => {
       allAppointments = appointments;
       loadUpcomingAppointments();
       loadHistoryAppointments();
       loadHomeTab();
       if (selectedDate) loadTimeSlots();
     });
-    console.log('✅ Usuário autenticado e sincronização ativada!');
+    
+    console.log('✅ Aplicação inicializada com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao inicializar aplicação:', error);
+    alert('Erro ao inicializar aplicação. Por favor, recarregue a página.');
+  }
+}
+
+// ====================
+// LISTENER DE AUTENTICAÇÃO
+// ====================
+
+onAuthChange(async (user) => {
+  console.log('🔄 Mudança de autenticação detectada:', user ? 'Usuário logado' : 'Usuário deslogado');
+  
+  if (user) {
+    currentUser = user;
+    console.log('👤 Usuário autenticado:', user.email);
+    
+    try {
+      // Buscar perfil do usuário
+      userProfile = await getUserProfile(user.uid);
+      console.log('📋 Perfil carregado:', userProfile);
+      
+      // Verificar se o perfil está completo
+      const profileComplete = await isProfileComplete(user.uid);
+      console.log('✓ Perfil completo:', profileComplete);
+      
+      if (!profileComplete) {
+        console.log('⚠️ Perfil incompleto - mostrando modal de completar cadastro');
+        
+        // Preencher dados já disponíveis no modal
+        document.getElementById('completeName').value = userProfile?.name || user.displayName || '';
+        document.getElementById('completePhone').value = userProfile?.phone || '';
+        
+        // Mostrar modal de completar perfil
+        loginScreen.classList.add('hidden');
+        mainScreen.classList.add('hidden');
+        completeProfileModal.classList.remove('hidden');
+      } else {
+        console.log('✅ Perfil completo - inicializando app');
+        // Perfil completo - inicializar aplicação
+        await initializeApp();
+      }
+    } catch (error) {
+      console.error('❌ Erro ao processar autenticação:', error);
+      alert('Erro ao carregar dados do usuário. Por favor, tente novamente.');
+      await logoutUser();
+    }
   } else {
+    console.log('🚪 Usuário deslogado - voltando para tela de login');
+    
+    // Limpar estado
     currentUser = null;
     userProfile = null;
-    if (unsubscribeTypes) unsubscribeTypes();
-    if (unsubscribeAppointments) unsubscribeAppointments();
+    
+    // Cancelar listeners
+    if (unsubscribeTypes) {
+      unsubscribeTypes();
+      unsubscribeTypes = null;
+    }
+    if (unsubscribeAppointments) {
+      unsubscribeAppointments();
+      unsubscribeAppointments = null;
+    }
+    
+    // Mostrar tela de login
     loginScreen.classList.remove('hidden');
     mainScreen.classList.add('hidden');
     completeProfileModal.classList.add('hidden');
   }
 });
 
+// Cleanup ao sair da página
 window.addEventListener('beforeunload', () => {
   if (unsubscribeTypes) unsubscribeTypes();
   if (unsubscribeAppointments) unsubscribeAppointments();
