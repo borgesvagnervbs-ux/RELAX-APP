@@ -4,6 +4,10 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Massagens Zen - Agendamento</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <meta name="theme-color" content="#6fb7a7">
   <link rel="stylesheet" href="style-user.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -385,19 +389,19 @@
           <h4>Redes Sociais</h4>
           <p style="margin-bottom: 16px;">Siga-nos e fique por dentro das novidades!</p>
           <div class="social-links">
-            <a href="https://wa.me/5554933115500" target="_blank" class="social-link whatsapp" title="WhatsApp">
+            <a href="https://wa.me/5554933115500" target="_blank" rel="noopener" class="social-link whatsapp" title="WhatsApp">
               <i class="fab fa-whatsapp"></i>
               <span>WhatsApp</span>
             </a>
-            <a href="https://facebook.com/massagenszen" target="_blank" class="social-link facebook" title="Facebook">
+            <a href="https://facebook.com/massagenszen" target="_blank" rel="noopener" class="social-link facebook" title="Facebook">
               <i class="fab fa-facebook-f"></i>
               <span>Facebook</span>
             </a>
-            <a href="https://instagram.com/massagenszen" target="_blank" class="social-link instagram" title="Instagram">
+            <a href="https://instagram.com/massagenszen" target="_blank" rel="noopener" class="social-link instagram" title="Instagram">
               <i class="fab fa-instagram"></i>
               <span>Instagram</span>
             </a>
-            <a href="https://maps.google.com/?q=Rua+das+Flores+123+Passo+Fundo" target="_blank" class="social-link location" title="Localização">
+            <a href="https://maps.google.com/?q=Rua+das+Flores+123+Passo+Fundo" target="_blank" rel="noopener" class="social-link location" title="Localização">
               <i class="fas fa-map-marked-alt"></i>
               <span>Localização</span>
             </a>
@@ -420,5 +424,13 @@
   <!-- Scripts -->
   <script src="firebase-config.js"></script>
   <script src="user.js"></script>
+  <script>
+    // Ativa o PWA (instalar na tela inicial / funcionar com internet instável)
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(err => console.warn('Service worker não registrado:', err));
+      });
+    }
+  </script>
 </body>
-</html>
+</html>

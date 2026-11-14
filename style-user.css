@@ -935,7 +935,7 @@ select {
 .footer-logo-icon {
   width: 56px;
   height: 56px;
-  background: white;
+  background: url('icon-512.png') center/contain no-repeat; /* antes "white" escondia o logo no computador */
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(111, 183, 167, 0.3);
 }
@@ -1319,4 +1319,4 @@ textarea:focus-visible,
   }
 }
 
-/* ===== FIM DO ARQUIVO CSS ===== */
+/* ===== FIM DO ARQUIVO CSS ===== */

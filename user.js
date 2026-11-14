@@ -44,7 +44,13 @@ let unsubscribeTypes = null;
 let unsubscribeAppointments = null;
 let selectedDate = null;
 let selectedHour = null;
+let selectedMinute = 0;
 let currentMonth = new Date();
+currentMonth.setDate(1);
+let scheduleConfig = null;          // configuração de horários definida no painel admin
+let isRegistering = false;          // evita abrir "Complete seu cadastro" durante o registro por email
+let timeSlotsRenderToken = 0;       // descarta carregamentos de horários antigos
+let isBooking = false;              // evita agendamento duplicado por clique duplo
 
 // Frases motivacionais
 const motivationalQuotes = [
@@ -141,6 +147,17 @@ function maskCep(value) {
 
 function unmaskCep(value) {
   return value.replace(/\D/g, '');
+}
+
+// Escapa texto antes de inserir via innerHTML
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Aplicar máscaras
@@ -263,7 +280,10 @@ async function loginWithEmail() {
     let message = 'Erro ao fazer login';
     if (error.code === 'auth/user-not-found') message = 'Usuário não encontrado';
     else if (error.code === 'auth/wrong-password') message = 'Senha incorreta';
+    else if (error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') message = 'Email ou senha incorretos';
     else if (error.code === 'auth/invalid-email') message = 'Email inválido';
+    else if (error.code === 'auth/too-many-requests') message = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+    else if (error.code === 'auth/network-request-failed') message = 'Sem conexão com a internet';
     alert(message);
   }
 }
@@ -315,16 +335,22 @@ async function registerWithEmail() {
       }
     };
     
-    await registerUser(email, password, name, phone, additionalData);
+    // Enquanto o perfil é gravado, o listener de login aguarda (senão abriria "Complete seu cadastro")
+    isRegistering = true;
+    const newUser = await registerUser(email, password, name, phone, additionalData);
+    isRegistering = false;
     alert('✅ Conta criada com sucesso!');
-    // O resto é tratado pelo onAuthChange
+    await handleAuthenticatedUser(newUser);
   } catch (error) {
+    isRegistering = false;
     console.error('Erro ao registrar:', error);
     let message = 'Erro ao criar conta';
     if (error.code === 'auth/email-already-in-use') message = 'Este email já está em uso';
     else if (error.code === 'auth/invalid-email') message = 'Email inválido';
     else if (error.code === 'auth/weak-password') message = 'Senha muito fraca';
     alert(message);
+    // Se a conta foi criada mas o perfil não foi salvo, o usuário completa o cadastro
+    if (auth.currentUser) await handleAuthenticatedUser(auth.currentUser);
   }
 }
 
@@ -388,7 +414,7 @@ async function completeProfile() {
     await updateUserProfile(currentUser.uid, userData);
     
     // Atualizar o perfil local
-    userProfile = { ...userProfile, ...userData, profileComplete: true };
+    userProfile = { ...(userProfile || {}), email: (userProfile && userProfile.email) || currentUser.email || '', ...userData };
     
     // Fechar modal e inicializar app
     completeProfileModal.classList.add('hidden');
@@ -417,7 +443,7 @@ async function logout() {
 // ====================
 
 function getStatusBadgeClass(status) {
-  return `status-badge status-${status.toLowerCase()}`;
+  return `status-badge status-${String(status || 'PENDENTE').toLowerCase()}`;
 }
 
 function getStatusDisplay(status) {
@@ -463,10 +489,10 @@ function openTab(tab) {
 }
 
 async function initBookingTab() {
-  renderCalendar();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  currentMonth = new Date(today);
+  currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  await loadScheduleConfig();
   await selectDate(today);
 }
 
@@ -481,6 +507,7 @@ function getDailyQuote() {
 }
 
 function loadHomeTab() {
+  if (!currentUser) return;
   const quoteContainer = document.getElementById('dailyQuote');
   const lastSessionContainer = document.getElementById('lastSessionInfo');
   const nextSessionContainer = document.getElementById('nextSessionInfo');
@@ -491,7 +518,7 @@ function loadHomeTab() {
   const lastSession = allAppointments.filter(ap => ap.userId === currentUser.uid && ap.paid && ap.start < Date.now()).sort((a, b) => b.start - a.start)[0];
   if (lastSession) {
     const d = new Date(lastSession.start);
-    lastSessionContainer.innerHTML = `<div class="session-type">${lastSession.typeName}</div><div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div><div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div><div class="session-price">${formatMoney(lastSession.price)}</div>`;
+    lastSessionContainer.innerHTML = `<div class="session-type">${escapeHtml(lastSession.typeName)}</div><div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div><div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div><div class="session-price">${formatMoney(lastSession.price)}</div>`;
   } else {
     lastSessionContainer.innerHTML = '<div class="no-session">Nenhuma sessão realizada ainda</div>';
   }
@@ -500,7 +527,7 @@ function loadHomeTab() {
   if (nextSession) {
     const d = new Date(nextSession.start);
     const statusDisplay = getStatusDisplay(nextSession.status);
-    nextSessionContainer.innerHTML = `<div class="session-type">${nextSession.typeName}</div><div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div><div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div><div class="session-price">${formatMoney(nextSession.price)}</div><div style="margin-top: 12px;"><span class="${getStatusBadgeClass(nextSession.status)}">${statusDisplay.icon} ${statusDisplay.text}</span></div>`;
+    nextSessionContainer.innerHTML = `<div class="session-type">${escapeHtml(nextSession.typeName)}</div><div class="session-date">📅 ${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div><div class="session-time">🕐 ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div><div class="session-price">${formatMoney(nextSession.price)}</div><div style="margin-top: 12px;"><span class="${getStatusBadgeClass(nextSession.status)}">${statusDisplay.icon} ${statusDisplay.text}</span></div>`;
   } else {
     nextSessionContainer.innerHTML = '<div class="no-session">Nenhuma sessão agendada</div><button class="btn btn-primary" onclick="openBookingTab()" style="margin-top: 16px; width: 100%;">Agendar Agora</button>';
   }
@@ -528,7 +555,7 @@ function loadProfileTab() {
   profileName.value = userProfile.name || '';
   profileCpf.value = userProfile.cpf ? maskCpf(userProfile.cpf) : '';
   profileBirthdate.value = userProfile.birthdate || '';
-  profilePhone.value = userProfile.phone || '';
+  profilePhone.value = userProfile.phone ? maskPhone(userProfile.phone) : '';
   profileEmail.value = userProfile.email || '';
   if (userProfile.address) {
     profileCep.value = userProfile.address.cep ? maskCep(userProfile.address.cep) : '';
@@ -600,24 +627,34 @@ async function saveProfile() {
 // TIPOS DE MASSAGEM
 // ====================
 
+// Monta a lista de tipos a partir de allTypes, mantendo a seleção atual do cliente
+function renderTypesSelect() {
+  const previous = selTypes.value;
+  if (allTypes.length === 0) {
+    selTypes.innerHTML = '<option value="">Nenhum tipo cadastrado</option>';
+    priceDisplay.textContent = 'R$ 0,00';
+    return;
+  }
+  selTypes.innerHTML = '<option value="">Selecione o tipo de massagem</option>';
+  allTypes.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+  allTypes.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    opt.dataset.price = t.price;
+    selTypes.appendChild(opt);
+  });
+  // Se o tipo escolhido ainda existe, continua selecionado (antes a escolha era apagada)
+  if (previous && allTypes.some(t => t.id === previous)) {
+    selTypes.value = previous;
+  }
+  updatePrice();
+}
+
 async function loadTypes() {
   try {
     allTypes = await getAllTypes();
-    if (allTypes.length === 0) {
-      selTypes.innerHTML = '<option value="">Nenhum tipo cadastrado</option>';
-      priceDisplay.textContent = 'R$ 0,00';
-      return;
-    }
-    selTypes.innerHTML = '<option value="">Selecione o tipo de massagem</option>';
-    allTypes.sort((a, b) => a.name.localeCompare(b.name));
-    allTypes.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = t.name;
-      opt.dataset.price = t.price;
-      selTypes.appendChild(opt);
-    });
-    priceDisplay.textContent = 'R$ 0,00';
+    renderTypesSelect();
   } catch (error) {
     console.error('Erro ao carregar tipos:', error);
     selTypes.innerHTML = '<option value="">Erro ao carregar</option>';
@@ -627,9 +664,9 @@ async function loadTypes() {
 function updatePrice() {
   const sel = selTypes.value;
   if (!sel) { priceDisplay.textContent = 'R$ 0,00'; return; }
-  const opt = selTypes.querySelector(`option[value="${sel}"]`);
-  const price = opt ? opt.dataset.price || 0 : 0;
-  priceDisplay.textContent = formatMoney(price || 0);
+  const opt = selTypes.options[selTypes.selectedIndex];
+  const price = opt ? Number(opt.dataset.price) || 0 : 0;
+  priceDisplay.textContent = formatMoney(price);
 }
 
 selTypes.addEventListener('change', updatePrice);
@@ -645,14 +682,14 @@ function renderCalendar() {
   const btnPrev = document.createElement('button');
   btnPrev.className = 'btn-nav';
   btnPrev.innerHTML = '◀';
-  btnPrev.onclick = () => { currentMonth.setMonth(currentMonth.getMonth() - 1); renderCalendar(); };
+  btnPrev.onclick = () => { currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1); renderCalendar(); };
   const monthTitle = document.createElement('div');
   monthTitle.className = 'month-title';
   monthTitle.textContent = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   const btnNext = document.createElement('button');
   btnNext.className = 'btn-nav';
   btnNext.innerHTML = '▶';
-  btnNext.onclick = () => { currentMonth.setMonth(currentMonth.getMonth() + 1); renderCalendar(); };
+  btnNext.onclick = () => { currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1); renderCalendar(); };
   header.appendChild(btnPrev);
   header.appendChild(monthTitle);
   header.appendChild(btnNext);
@@ -709,55 +746,180 @@ async function selectDate(date) {
   selectedDate = new Date(date);
   selectedDate.setHours(0, 0, 0, 0);
   selectedHour = null;
+  selectedMinute = 0;
   renderCalendar();
   await loadTimeSlots();
 }
 
+// ====================
+// CONFIGURAÇÃO DE HORÁRIOS (definida no painel admin)
+// ====================
+
+const DEFAULT_SCHEDULE_CONFIG = {
+  sessionDuration: 60,
+  enabledDays: [1, 2, 3, 4, 5],
+  schedules: {
+    0: { enabled: false, start: '08:00', end: '18:00', intervals: [] },
+    1: { enabled: true, start: '08:00', end: '18:00', intervals: [] },
+    2: { enabled: true, start: '08:00', end: '18:00', intervals: [] },
+    3: { enabled: true, start: '08:00', end: '18:00', intervals: [] },
+    4: { enabled: true, start: '08:00', end: '18:00', intervals: [] },
+    5: { enabled: true, start: '08:00', end: '18:00', intervals: [] },
+    6: { enabled: false, start: '08:00', end: '18:00', intervals: [] }
+  }
+};
+
+function normalizeScheduleConfig(data) {
+  const base = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE_CONFIG));
+  if (!data) return base;
+  const config = {
+    sessionDuration: parseInt(data.sessionDuration, 10) || base.sessionDuration,
+    enabledDays: Array.isArray(data.enabledDays) ? data.enabledDays.map(Number) : base.enabledDays,
+    schedules: {}
+  };
+  for (let i = 0; i < 7; i++) {
+    const src = (data.schedules && (data.schedules[i] || data.schedules[String(i)])) || base.schedules[i];
+    config.schedules[i] = {
+      enabled: config.enabledDays.includes(i),
+      start: src.start || '08:00',
+      end: src.end || '18:00',
+      intervals: Array.isArray(src.intervals) ? src.intervals.filter(it => it && it.start && it.end) : []
+    };
+  }
+  return config;
+}
+
+async function loadScheduleConfig() {
+  try {
+    const doc = await db.collection('system_config').doc('schedule').get();
+    scheduleConfig = normalizeScheduleConfig(doc.exists ? doc.data() : null);
+  } catch (error) {
+    console.error('Erro ao carregar configuração de horários:', error);
+    if (!scheduleConfig) scheduleConfig = normalizeScheduleConfig(null);
+  }
+  updatePriceLabel();
+}
+
+function getSessionMinutes() {
+  return scheduleConfig ? scheduleConfig.sessionDuration : 60;
+}
+
+// Atualiza o texto "Valor da sessão (1 hora)" conforme a duração configurada
+function updatePriceLabel() {
+  const label = document.querySelector('#priceDisplayBox .small');
+  if (!label) return;
+  const minutes = getSessionMinutes();
+  label.textContent = minutes === 60 ? 'Valor da sessão (1 hora):' : `Valor da sessão (${minutes} min):`;
+}
+
+// Mesma regra do painel admin: dias, horário de início/fim, duração e intervalos
+function generateTimeSlotsForDay(date) {
+  const config = scheduleConfig || normalizeScheduleConfig(null);
+  const daySchedule = config.schedules[date.getDay()];
+  if (!daySchedule || !daySchedule.enabled) return [];
+
+  const slots = [];
+  const sessionDuration = config.sessionDuration;
+  const [startHour, startMin] = daySchedule.start.split(':').map(Number);
+  const [endHour, endMin] = daySchedule.end.split(':').map(Number);
+  let currentMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+
+  while (currentMinutes + sessionDuration <= endMinutes) {
+    const hour = Math.floor(currentMinutes / 60);
+    const minute = currentMinutes % 60;
+    const isInInterval = daySchedule.intervals.some(interval => {
+      const [ish, ism] = interval.start.split(':').map(Number);
+      const [ieh, iem] = interval.end.split(':').map(Number);
+      return currentMinutes >= ish * 60 + ism && currentMinutes < ieh * 60 + iem;
+    });
+    if (!isInInterval) {
+      slots.push({ hour, minute, time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` });
+    }
+    currentMinutes += sessionDuration;
+  }
+  return slots;
+}
+
 async function loadTimeSlots() {
   if (!selectedDate) { timeSlotsSection.classList.add('hidden'); return; }
+  const token = ++timeSlotsRenderToken;
+  const day = new Date(selectedDate);
   timeSlotsSection.classList.remove('hidden');
   timeSlotsList.innerHTML = '<div class="loading">Carregando horários...</div>';
   
   try {
-    const dateStr = toDateStr(selectedDate);
-    const dayAvailability = await getDayAvailability(dateStr);
-    const dayAppointments = allAppointments.filter(ap => {
-      const apDate = new Date(ap.start);
-      return apDate.toDateString() === selectedDate.toDateString();
-    });
+    if (!scheduleConfig) await loadScheduleConfig();
+    const slots = generateTimeSlotsForDay(day);
+    
+    if (slots.length === 0) {
+      if (token === timeSlotsRenderToken) {
+        timeSlotsList.innerHTML = '<div class="no-slots">Nenhum horário disponível neste dia</div>';
+      }
+      return;
+    }
+    
+    const dateStr = toDateStr(day);
+    const dayStart = new Date(day);
+    const dayEnd = new Date(day);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    
+    // Busca os horários bloqueados pelo admin e TODOS os agendamentos do dia
+    // (antes só os do próprio cliente eram considerados, então horários já ocupados apareciam livres)
+    const [dayAvailability, dayAppointments] = await Promise.all([
+      getDayAvailability(dateStr),
+      getAppointmentsInRange(dayStart.getTime(), dayEnd.getTime())
+    ]);
+    
+    if (token !== timeSlotsRenderToken) return;
+    
+    const sessionMs = getSessionMinutes() * 60 * 1000;
+    const activeAppointments = dayAppointments.filter(ap => ap.status !== 'CANCELADO');
     
     timeSlotsList.innerHTML = '';
-    const now = new Date();
-    const isToday = selectedDate.toDateString() === now.toDateString();
-    const currentHour = now.getHours();
+    const now = Date.now();
     let hasAvailableSlots = false;
     
-    for (let hour = 8; hour <= 22; hour++) {
-      const slotDate = new Date(selectedDate);
-      slotDate.setHours(hour, 0, 0, 0);
-      if (isToday && hour <= currentHour) continue;
-      if (dayAvailability[hour] === false) continue;
-      const isBooked = dayAppointments.some(ap => {
-        const apDate = new Date(ap.start);
-        return apDate.getHours() === hour;
-      });
-      if (isBooked) continue;
+    slots.forEach(slot => {
+      const slotDate = new Date(day);
+      slotDate.setHours(slot.hour, slot.minute, 0, 0);
+      const slotStart = slotDate.getTime();
+      
+      // Horário passado
+      if (slotStart <= now) return;
+      
+      // Bloqueado pelo admin (formato atual "8:30" e formato antigo "8")
+      const availability = dayAvailability || {};
+      if (availability[`${slot.hour}:${slot.minute}`] === false) return;
+      if (slot.minute === 0 && availability[slot.hour] === false) return;
+      
+      // Ocupado por outro agendamento
+      const isBooked = activeAppointments.some(ap =>
+        ap.start < slotStart + sessionMs && (ap.end || ap.start + 60 * 60 * 1000) > slotStart
+      );
+      if (isBooked) return;
       
       hasAvailableSlots = true;
-      const slot = document.createElement('div');
-      slot.className = 'time-slot';
-      if (selectedHour === hour) slot.classList.add('selected');
+      const slotEl = document.createElement('div');
+      slotEl.className = 'time-slot';
+      if (selectedHour === slot.hour && selectedMinute === slot.minute) slotEl.classList.add('selected');
       
       const timeLabel = document.createElement('div');
       timeLabel.className = 'time-label';
-      timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
+      timeLabel.textContent = slot.time;
       const statusLabel = document.createElement('div');
       statusLabel.className = 'status-label available';
       statusLabel.textContent = 'Disponível';
-      slot.appendChild(timeLabel);
-      slot.appendChild(statusLabel);
-      slot.onclick = () => selectTimeSlot(hour);
-      timeSlotsList.appendChild(slot);
+      slotEl.appendChild(timeLabel);
+      slotEl.appendChild(statusLabel);
+      slotEl.onclick = () => selectTimeSlot(slot.hour, slot.minute, slotEl);
+      timeSlotsList.appendChild(slotEl);
+    });
+    
+    // O horário escolhido pode ter sido ocupado enquanto a tela estava aberta
+    if (selectedHour !== null && !timeSlotsList.querySelector('.time-slot.selected')) {
+      selectedHour = null;
+      selectedMinute = 0;
     }
     
     if (!hasAvailableSlots) {
@@ -765,14 +927,17 @@ async function loadTimeSlots() {
     }
   } catch (error) {
     console.error('Erro ao carregar horários:', error);
-    timeSlotsList.innerHTML = '<div class="error">Erro ao carregar horários</div>';
+    if (token === timeSlotsRenderToken) {
+      timeSlotsList.innerHTML = '<div class="error">Erro ao carregar horários</div>';
+    }
   }
 }
 
-function selectTimeSlot(hour) {
+function selectTimeSlot(hour, minute, slotEl) {
   selectedHour = hour;
-  document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
+  selectedMinute = minute || 0;
+  document.querySelectorAll('#timeSlotsList .time-slot').forEach(slot => slot.classList.remove('selected'));
+  if (slotEl) slotEl.classList.add('selected');
   setTimeout(() => { btnBook.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 }
 
@@ -781,10 +946,11 @@ function selectTimeSlot(hour) {
 // ====================
 
 async function bookAppointment() {
+  if (isBooking) return;
   if (!currentUser || !userProfile) { alert('Erro: usuário não autenticado'); return; }
   if (!userProfile.name || !userProfile.phone || !userProfile.cpf || !userProfile.birthdate) {
     alert('Complete seu perfil antes de agendar. Vá em "Perfil" no menu lateral.');
-    openTab('profile');
+    openProfileTab();
     return;
   }
   
@@ -797,13 +963,25 @@ async function bookAppointment() {
   if (!t) { alert('Tipo inválido. Por favor, recarregue a página.'); return; }
   
   const startTs = new Date(selectedDate);
-  startTs.setHours(selectedHour, 0, 0, 0);
-  const endTs = startTs.getTime() + 60 * 60 * 1000;
+  startTs.setHours(selectedHour, selectedMinute || 0, 0, 0);
+  const endTs = startTs.getTime() + getSessionMinutes() * 60 * 1000;
+  
+  if (startTs.getTime() <= Date.now()) {
+    alert('Este horário já passou. Por favor, escolha outro horário.');
+    await loadTimeSlots();
+    return;
+  }
+  
+  isBooking = true;
+  btnBook.disabled = true;
+  btnBook.textContent = 'Agendando...';
   
   try {
     const conflict = await checkConflict(startTs.getTime(), endTs);
     if (conflict) {
       alert('Este horário acabou de ser reservado. Por favor, escolha outro horário.');
+      selectedHour = null;
+      selectedMinute = 0;
       await loadTimeSlots();
       return;
     }
@@ -824,8 +1002,6 @@ async function bookAppointment() {
       createdAt: Date.now()
     };
     
-    btnBook.disabled = true;
-    btnBook.textContent = 'Agendando...';
     await saveAppointment(appointment);
     alert('🎉 Agendamento realizado com sucesso!\n\nStatus: PENDENTE\n\nAguarde a confirmação do estabelecimento.');
     resetForm();
@@ -833,15 +1009,25 @@ async function bookAppointment() {
     console.error('Erro ao agendar:', error);
     alert('Erro ao realizar agendamento. Tente novamente.');
   } finally {
+    isBooking = false;
     btnBook.disabled = false;
     btnBook.textContent = 'Confirmar Agendamento';
   }
+}
+
+// Abre a aba Perfil marcando o item correto no menu
+function openProfileTab() {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  const item = document.querySelector('.sb-item[data-tab="profile"]');
+  if (item) item.classList.add('active');
+  openTab('profile');
 }
 
 function resetForm() {
   note.value = '';
   selectedDate = null;
   selectedHour = null;
+  selectedMinute = 0;
   selTypes.value = '';
   priceDisplay.textContent = 'R$ 0,00';
   timeSlotsSection.classList.add('hidden');
@@ -903,7 +1089,7 @@ function createAppointmentCard(ap, showCancel) {
   const meta = document.createElement('div');
   meta.className = 'app-meta';
   const d = new Date(ap.start);
-  meta.textContent = `📅 ${d.toLocaleDateString()} às ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+  meta.textContent = `📅 ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`;
   info.appendChild(title);
   info.appendChild(meta);
   
@@ -928,7 +1114,7 @@ function createAppointmentCard(ap, showCancel) {
     reasonDiv.className = 'small';
     reasonDiv.style.marginTop = '8px';
     reasonDiv.style.color = '#991b1b';
-    reasonDiv.innerHTML = `<strong>Motivo do cancelamento:</strong> ${ap.cancellationReason}`;
+    reasonDiv.innerHTML = `<strong>Motivo do cancelamento:</strong> ${escapeHtml(ap.cancellationReason)}`;
     info.appendChild(reasonDiv);
   }
   
@@ -946,6 +1132,8 @@ function createAppointmentCard(ap, showCancel) {
     btnCancel.onclick = async () => {
       const reason = prompt('Informe o motivo do cancelamento (obrigatório):');
       if (reason && reason.trim()) {
+        const previous = { status: ap.status, cancellationReason: ap.cancellationReason };
+        btnCancel.disabled = true;
         try {
           ap.status = 'CANCELADO';
           ap.cancellationReason = reason.trim();
@@ -953,8 +1141,13 @@ function createAppointmentCard(ap, showCancel) {
           alert('✅ Agendamento cancelado com sucesso!');
           loadUpcomingAppointments();
         } catch (error) {
+          ap.status = previous.status;
+          if (previous.cancellationReason === undefined) delete ap.cancellationReason;
+          else ap.cancellationReason = previous.cancellationReason;
           console.error('Erro ao cancelar:', error);
           alert('Erro ao cancelar agendamento.');
+        } finally {
+          btnCancel.disabled = false;
         }
       } else if (reason !== null) {
         alert('O motivo do cancelamento é obrigatório!');
@@ -970,35 +1163,41 @@ function createAppointmentCard(ap, showCancel) {
 // INICIALIZAÇÃO DO APP
 // ====================
 
+function unsubscribeAllListeners() {
+  if (unsubscribeTypes) { unsubscribeTypes(); unsubscribeTypes = null; }
+  if (unsubscribeAppointments) { unsubscribeAppointments(); unsubscribeAppointments = null; }
+}
+
 async function initializeApp() {
   try {
     console.log('🚀 Inicializando aplicação...');
     
     // Mostrar tela principal
     loginScreen.classList.add('hidden');
+    completeProfileModal.classList.add('hidden');
     mainScreen.classList.remove('hidden');
     
     // Configurar informações do usuário
-    const firstName = userProfile.name.split(' ')[0];
+    const firstName = (userProfile.name || currentUser.displayName || 'Cliente').split(' ')[0];
     greeting.textContent = `Olá, ${firstName}!`;
     sidebarUserName.textContent = firstName;
-    sidebarUserEmail.textContent = userProfile.email;
+    sidebarUserEmail.textContent = userProfile.email || currentUser.email || '';
     
     // Carregar dados
-    await loadTypes();
+    await Promise.all([loadTypes(), loadScheduleConfig()]);
     allAppointments = await getUserAppointments(currentUser.uid);
     
     // Abrir tela inicial
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.toggle('active', i.dataset.tab === 'home'));
     openTab('home');
     
     // Configurar listeners em tempo real
-    if (unsubscribeTypes) unsubscribeTypes();
+    unsubscribeAllListeners();
     unsubscribeTypes = onTypesChange(types => { 
       allTypes = types; 
-      loadTypes(); 
+      renderTypesSelect(); 
     });
     
-    if (unsubscribeAppointments) unsubscribeAppointments();
     unsubscribeAppointments = onUserAppointmentsChange(currentUser.uid, appointments => {
       allAppointments = appointments;
       loadUpcomingAppointments();
@@ -1018,69 +1217,81 @@ async function initializeApp() {
 // LISTENER DE AUTENTICAÇÃO
 // ====================
 
-onAuthChange(async (user) => {
-  console.log('🔄 Mudança de autenticação detectada:', user ? 'Usuário logado' : 'Usuário deslogado');
+// Decide se abre o app ou o modal "Complete seu Cadastro"
+async function handleAuthenticatedUser(user) {
+  currentUser = user;
   
-  if (user) {
-    currentUser = user;
-    console.log('👤 Usuário autenticado:', user.email);
+  try {
+    // Buscar perfil do usuário
+    userProfile = await getUserProfile(user.uid);
     
-    try {
-      // Buscar perfil do usuário
-      userProfile = await getUserProfile(user.uid);
-      console.log('📋 Perfil carregado:', userProfile);
+    // Verificar se o perfil está completo
+    const profileComplete = await isProfileComplete(user.uid);
+    
+    if (!profileComplete) {
+      // Preencher dados já disponíveis no modal
+      const p = userProfile || {};
+      const addr = p.address || {};
+      document.getElementById('completeName').value = p.name || user.displayName || '';
+      document.getElementById('completeCpf').value = p.cpf ? maskCpf(p.cpf) : '';
+      document.getElementById('completeBirthdate').value = p.birthdate || '';
+      document.getElementById('completePhone').value = p.phone ? maskPhone(p.phone) : '';
+      document.getElementById('completeCep').value = addr.cep ? maskCep(addr.cep) : '';
+      document.getElementById('completeStreet').value = addr.street || '';
+      document.getElementById('completeNumber').value = addr.number || '';
+      document.getElementById('completeComplement').value = addr.complement || '';
+      document.getElementById('completeNeighborhood').value = addr.neighborhood || '';
+      document.getElementById('completeCity').value = addr.city || '';
+      document.getElementById('completeState').value = addr.state || '';
       
-      // Verificar se o perfil está completo
-      const profileComplete = await isProfileComplete(user.uid);
-      console.log('✓ Perfil completo:', profileComplete);
-      
-      if (!profileComplete) {
-        console.log('⚠️ Perfil incompleto - mostrando modal de completar cadastro');
-        
-        // Preencher dados já disponíveis no modal
-        document.getElementById('completeName').value = userProfile?.name || user.displayName || '';
-        document.getElementById('completePhone').value = userProfile?.phone || '';
-        
-        // Mostrar modal de completar perfil
-        loginScreen.classList.add('hidden');
-        mainScreen.classList.add('hidden');
-        completeProfileModal.classList.remove('hidden');
-      } else {
-        console.log('✅ Perfil completo - inicializando app');
-        // Perfil completo - inicializar aplicação
-        await initializeApp();
-      }
-    } catch (error) {
-      console.error('❌ Erro ao processar autenticação:', error);
-      alert('Erro ao carregar dados do usuário. Por favor, tente novamente.');
-      await logoutUser();
+      // Mostrar modal de completar perfil
+      loginScreen.classList.add('hidden');
+      mainScreen.classList.add('hidden');
+      completeProfileModal.classList.remove('hidden');
+    } else {
+      // Perfil completo - inicializar aplicação
+      await initializeApp();
     }
+  } catch (error) {
+    console.error('❌ Erro ao processar autenticação:', error);
+    alert('Erro ao carregar dados do usuário. Por favor, tente novamente.');
+    await logoutUser();
+  }
+}
+
+onAuthChange(async (user) => {
+  if (user) {
+    // Durante o registro por email, quem continua o fluxo é o registerWithEmail
+    if (isRegistering) return;
+    await handleAuthenticatedUser(user);
   } else {
-    console.log('🚪 Usuário deslogado - voltando para tela de login');
-    
     // Limpar estado
     currentUser = null;
     userProfile = null;
+    allAppointments = [];
+    selectedDate = null;
+    selectedHour = null;
+    selectedMinute = 0;
     
     // Cancelar listeners
-    if (unsubscribeTypes) {
-      unsubscribeTypes();
-      unsubscribeTypes = null;
-    }
-    if (unsubscribeAppointments) {
-      unsubscribeAppointments();
-      unsubscribeAppointments = null;
-    }
+    unsubscribeAllListeners();
     
-    // Mostrar tela de login
+    // Mostrar tela de login (sempre na aba "Login")
+    showLoginTab();
+    document.getElementById('loginPassword').value = '';
     loginScreen.classList.remove('hidden');
     mainScreen.classList.add('hidden');
     completeProfileModal.classList.add('hidden');
   }
 });
 
+// Enter nos campos de login aciona o botão "Entrar"
+['loginEmail', 'loginPassword'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') loginWithEmail(); });
+});
+
 // Cleanup ao sair da página
 window.addEventListener('beforeunload', () => {
-  if (unsubscribeTypes) unsubscribeTypes();
-  if (unsubscribeAppointments) unsubscribeAppointments();
+  unsubscribeAllListeners();
 });
